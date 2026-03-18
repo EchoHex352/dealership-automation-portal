@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neuralogic Automotive Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        .slide-in { animation: slideIn 0.5s ease-out; }
+        .pulse { animation: pulse 2s ease-in-out infinite; }
+        
+        .chat-message {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .typing-indicator {
+            display: inline-flex;
+            gap: 4px;
+        }
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: #9ca3af;
+            border-radius: 50%;
+            animation: pulse 1.4s ease-in-out infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        .metric-card {
+            transition: all 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <div id="app"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Main Demo App
+        function AutoDealerDemo() {
+            const [screen, setScreen] = useState('welcome'); // welcome, setup, bdc-demo, roi, comparison
+            const [dealerName, setDealerName] = useState('');
+            const [bdcTeamSize, setBdcTeamSize] = useState(8);
+            const [monthlyLeads, setMonthlyLeads] = useState(500);
+            const [demoStep, setDemoStep] = useState(0);
+            const [chatMessages, setChatMessages] = useState([]);
+            const [isTyping, setIsTyping] = useState(false);
+            const [leadData, setLeadData] = useState({
+                name: 'Michael Thompson',
+                email: 'mthompson@email.com',
+                phone: '(555) 234-5678',
+                vehicle: '2024 Honda Accord',
+                timeframe: 'This week'
+            });
+
+            // Navigate between screens
+            const navigate = (screenName) => {
+                setScreen(screenName);
+                setDemoStep(0);
+                setChatMessages([]);
+            };
+
+            // Start BDC demo sequence
+            const startBDCDemo = () => {
+                setScreen('bdc-demo');
+                setDemoStep(1);
+                // Initial lead notification
+                setTimeout(() => addMessage('system', 'New lead received from website - 3:47 PM'), 500);
+            };
+
+            // Add chat message
+            const addMessage = (sender, text, delay = 0) => {
+                setTimeout(() => {
+                    setIsTyping(true);
+                    setTimeout(() => {
+                        setChatMessages(prev => [...prev, { sender, text, timestamp: new Date() }]);
+                        setIsTyping(false);
+                    }, sender === 'ai' ? 1500 : 500);
+                }, delay);
+            };
+
+            // Advance demo steps
+            const nextStep = () => {
+                const step = demoStep + 1;
+                setDemoStep(step);
+
+                // BDC Demo sequence
+                if (screen === 'bdc-demo') {
+                    switch(step) {
+                        case 2:
+                            addMessage('ai', `Hi ${leadData.name}! Thanks for your interest in the ${leadData.vehicle}. I'm here to help you get started. Are you looking to schedule a test drive?`);
+                            break;
+                        case 3:
+                            addMessage('customer', 'Yes, I am. What times do you have available this week?', 1000);
+                            break;
+                        case 4:
+                            addMessage('ai', 'Great! I have several openings. Would Tuesday at 2:00 PM, Wednesday at 10:00 AM, or Thursday at 4:00 PM work better for you?', 2000);
+                            break;
+                        case 5:
+                            addMessage('customer', 'Wednesday at 10 works perfect.', 1000);
+                            break;
+                        case 6:
+                            addMessage('ai', 'Perfect! I have you scheduled for Wednesday at 10:00 AM. You'll be meeting with Sarah Johnson, one of our Honda specialists. I'll send a confirmation text to (555) 234-5678. Is there anything else I can help you with today?', 2000);
+                            break;
+                        case 7:
+                            addMessage('customer', 'No, that's it. Thanks!', 1000);
+                            break;
+                        case 8:
+                            addMessage('ai', 'You're very welcome! We're looking forward to seeing you Wednesday. Have a great day!', 1500);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            };
+
+            // Calculate ROI
+            const calculateROI = () => {
+                const currentCost = bdcTeamSize * 60000; // $60K per BDC rep
+                const turnoverCost = bdcTeamSize * 15000; // $15K turnover cost per rep
+                const lostLeadCost = monthlyLeads * 0.78 * 300 * 12; // 78% lost leads @ $300 potential profit
+                const totalCurrentCost = currentCost + turnoverCost + lostLeadCost;
+                
+                const neuralogicCost = currentCost * 0.3; // 70% reduction
+                const savings = totalCurrentCost - neuralogicCost;
+                const roi = (savings / neuralogicCost * 100).toFixed(0);
+
+                return {
+                    currentCost,
+                    turnoverCost,
+                    lostLeadCost,
+                    totalCurrentCost,
+                    neuralogicCost,
+                    savings,
+                    roi
+                };
+            };
+
+            const roi = calculateROI();
+
+            return (
+                <div className="min-h-screen">
+                    {/* Header */}
+                    <header className="bg-white border-b border-slate-200 shadow-sm">
+                        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                                    <span className="text-white font-bold text-xl">N</span>
+                                </div>
+                                <div>
+                                    <h1 className="text-xl font-bold text-slate-900">Neuralogic</h1>
+                                    <p className="text-xs text-slate-500">Automotive AI Demo</p>
+                                </div>
+                            </div>
+                            {screen !== 'welcome' && (
+                                <button 
+                                    onClick={() => navigate('welcome')}
+                                    className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 transition"
+                                >
+                                    ← Back to Home
+                                </button>
+                            )}
+                        </div>
+                    </header>
+
+                    {/* Welcome Screen */}
+                    {screen === 'welcome' && (
+                        <div className="max-w-4xl mx-auto px-6 py-16 fade-in">
+                            <div className="text-center mb-12">
+                                <h2 className="text-4xl font-bold text-slate-900 mb-4">
+                                    Autonomous BDC Replacement Demo
+                                </h2>
+                                <p className="text-xl text-slate-600">
+                                    See how we replace your $480K BDC team with AI that responds in &lt;30 seconds
+                                </p>
+                            </div>
+
+                            <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+                                <h3 className="text-2xl font-bold text-slate-900 mb-6">Quick Setup</h3>
+                                
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                            Dealership Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={dealerName}
+                                            onChange={(e) => setDealerName(e.target.value)}
+                                            placeholder="e.g., ABC Motors"
+                                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                            Current BDC Team Size
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={bdcTeamSize}
+                                            onChange={(e) => setBdcTeamSize(parseInt(e.target.value) || 0)}
+                                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                        />
+                                        <p className="text-sm text-slate-500 mt-1">
+                                            Estimated annual cost: ${(bdcTeamSize * 60000).toLocaleString()}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                            Monthly Lead Volume
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={monthlyLeads}
+                                            onChange={(e) => setMonthlyLeads(parseInt(e.target.value) || 0)}
+                                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid md:grid-cols-3 gap-6">
+                                <button
+                                    onClick={startBDCDemo}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition"
+                                >
+                                    🤖 BDC Demo
+                                    <p className="text-sm font-normal mt-2 opacity-90">See autonomous lead handling</p>
+                                </button>
+
+                                <button
+                                    onClick={() => navigate('roi')}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition"
+                                >
+                                    💰 ROI Calculator
+                                    <p className="text-sm font-normal mt-2 opacity-90">Calculate your savings</p>
+                                </button>
+
+                                <button
+                                    onClick={() => navigate('comparison')}
+                                    className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition"
+                                >
+                                    📊 Comparison
+                                    <p className="text-sm font-normal mt-2 opacity-90">Old vs New way</p>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* BDC Demo Screen */}
+                    {screen === 'bdc-demo' && (
+                        <div className="max-w-7xl mx-auto px-6 py-8 fade-in">
+                            <div className="mb-6">
+                                <h2 className="text-3xl font-bold text-slate-900 mb-2">Live BDC Demo</h2>
+                                <p className="text-slate-600">Watch how the AI handles a lead in real-time</p>
+                            </div>
+
+                            <div className="grid lg:grid-cols-2 gap-6">
+                                {/* Left: Lead Form Simulation */}
+                                <div className="bg-white rounded-xl shadow-lg p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-bold text-slate-900">Dealership Website</h3>
+                                        <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">
+                                            LIVE
+                                        </span>
+                                    </div>
+
+                                    <div className="bg-slate-50 rounded-lg p-6 border-2 border-slate-200">
+                                        <h4 className="text-xl font-bold text-slate-900 mb-4">Request Info</h4>
+                                        
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={leadData.name}
+                                                    readOnly
+                                                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                                                <input
+                                                    type="email"
+                                                    value={leadData.email}
+                                                    readOnly
+                                                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                                                <input
+                                                    type="tel"
+                                                    value={leadData.phone}
+                                                    readOnly
+                                                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-1">Vehicle Interest</label>
+                                                <input
+                                                    type="text"
+                                                    value={leadData.vehicle}
+                                                    readOnly
+                                                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-1">Timeframe</label>
+                                                <input
+                                                    type="text"
+                                                    value={leadData.timeframe}
+                                                    readOnly
+                                                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded"
+                                                />
+                                            </div>
+
+                                            {demoStep === 0 && (
+                                                <button
+                                                    onClick={nextStep}
+                                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition"
+                                                >
+                                                    Submit Request
+                                                </button>
+                                            )}
+
+                                            {demoStep >= 1 && (
+                                                <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4 text-center">
+                                                    <div className="text-green-700 font-semibold mb-1">✓ Request Submitted</div>
+                                                    <div className="text-sm text-green-600">Response time: &lt;30 seconds</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right: Chat Interface */}
+                                <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-bold text-slate-900">AI Response System</h3>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                            <span className="text-xs text-slate-600">Active</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 bg-slate-50 rounded-lg p-4 mb-4 overflow-y-auto custom-scrollbar" style={{minHeight: '400px', maxHeight: '400px'}}>
+                                        {chatMessages.length === 0 && (
+                                            <div className="flex items-center justify-center h-full text-slate-400">
+                                                Waiting for lead...
+                                            </div>
+                                        )}
+
+                                        {chatMessages.map((msg, idx) => (
+                                            <div key={idx} className={`chat-message mb-4 ${msg.sender === 'ai' || msg.sender === 'system' ? 'text-left' : 'text-right'}`}>
+                                                {msg.sender === 'system' && (
+                                                    <div className="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-2 rounded-lg inline-block text-sm">
+                                                        🔔 {msg.text}
+                                                    </div>
+                                                )}
+
+                                                {msg.sender === 'ai' && (
+                                                    <div className="inline-block max-w-[80%]">
+                                                        <div className="bg-blue-600 text-white px-4 py-3 rounded-2xl rounded-tl-sm">
+                                                            {msg.text}
+                                                        </div>
+                                                        <div className="text-xs text-slate-400 mt-1 ml-2">
+                                                            Neuralogic AI • {msg.timestamp.toLocaleTimeString()}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {msg.sender === 'customer' && (
+                                                    <div className="inline-block max-w-[80%]">
+                                                        <div className="bg-slate-200 text-slate-900 px-4 py-3 rounded-2xl rounded-tr-sm">
+                                                            {msg.text}
+                                                        </div>
+                                                        <div className="text-xs text-slate-400 mt-1 mr-2">
+                                                            {leadData.name} • {msg.timestamp.toLocaleTimeString()}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+
+                                        {isTyping && (
+                                            <div className="text-left mb-4">
+                                                <div className="bg-slate-200 px-4 py-3 rounded-2xl rounded-tl-sm inline-block">
+                                                    <div className="typing-indicator">
+                                                        <span></span>
+                                                        <span></span>
+                                                        <span></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {demoStep > 0 && demoStep < 9 && (
+                                        <button
+                                            onClick={nextStep}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition"
+                                        >
+                                            {demoStep === 1 ? 'AI Responds →' : 'Continue →'}
+                                        </button>
+                                    )}
+
+                                    {demoStep === 9 && (
+                                        <div className="space-y-3">
+                                            <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4 text-center">
+                                                <div className="text-green-700 font-bold mb-1">✓ Appointment Booked</div>
+                                                <div className="text-sm text-green-600">Total time: 4 minutes 23 seconds</div>
+                                                <div className="text-xs text-green-600 mt-1">Human involvement: 0%</div>
+                                            </div>
+                                            <button
+                                                onClick={() => navigate('roi')}
+                                                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition"
+                                            >
+                                                See ROI Savings →
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Stats Bar */}
+                            {demoStep >= 1 && (
+                                <div className="mt-6 grid grid-cols-4 gap-4 fade-in">
+                                    <div className="bg-white rounded-lg shadow p-4 text-center metric-card">
+                                        <div className="text-2xl font-bold text-blue-600">&lt;30s</div>
+                                        <div className="text-sm text-slate-600">Response Time</div>
+                                    </div>
+                                    <div className="bg-white rounded-lg shadow p-4 text-center metric-card">
+                                        <div className="text-2xl font-bold text-green-600">100%</div>
+                                        <div className="text-sm text-slate-600">Lead Coverage</div>
+                                    </div>
+                                    <div className="bg-white rounded-lg shadow p-4 text-center metric-card">
+                                        <div className="text-2xl font-bold text-purple-600">24/7</div>
+                                        <div className="text-sm text-slate-600">Availability</div>
+                                    </div>
+                                    <div className="bg-white rounded-lg shadow p-4 text-center metric-card">
+                                        <div className="text-2xl font-bold text-orange-600">$0</div>
+                                        <div className="text-sm text-slate-600">Turnover Cost</div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ROI Calculator Screen */}
+                    {screen === 'roi' && (
+                        <div className="max-w-5xl mx-auto px-6 py-8 fade-in">
+                            <div className="mb-8">
+                                <h2 className="text-3xl font-bold text-slate-900 mb-2">ROI Calculator</h2>
+                                <p className="text-slate-600">Your custom savings breakdown</p>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 gap-8">
+                                {/* Current Costs */}
+                                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6">
+                                    <h3 className="text-xl font-bold text-red-900 mb-4 flex items-center gap-2">
+                                        <span>❌</span> Current Annual Costs
+                                    </h3>
+                                    
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-700">BDC Team Payroll</span>
+                                            <span className="font-bold text-slate-900">${roi.currentCost.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-700">Turnover Costs</span>
+                                            <span className="font-bold text-slate-900">${roi.turnoverCost.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-700">Lost Lead Revenue</span>
+                                            <span className="font-bold text-slate-900">${roi.lostLeadCost.toLocaleString()}</span>
+                                        </div>
+                                        <div className="border-t-2 border-red-300 pt-4">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-bold text-red-900">TOTAL</span>
+                                                <span className="font-bold text-2xl text-red-900">${roi.totalCurrentCost.toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Neuralogic Costs */}
+                                <div className="bg-green-50 border-2 border-green-200 rounded-xl p-6">
+                                    <h3 className="text-xl font-bold text-green-900 mb-4 flex items-center gap-2">
+                                        <span>✅</span> With Neuralogic
+                                    </h3>
+                                    
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-700">Platform Cost</span>
+                                            <span className="font-bold text-slate-900">${roi.neuralogicCost.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-700">Turnover Costs</span>
+                                            <span className="font-bold text-slate-900">$0</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-700">Lost Lead Revenue</span>
+                                            <span className="font-bold text-slate-900">$0</span>
+                                        </div>
+                                        <div className="border-t-2 border-green-300 pt-4">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-bold text-green-900">TOTAL</span>
+                                                <span className="font-bold text-2xl text-green-900">${roi.neuralogicCost.toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Savings Summary */}
+                            <div className="mt-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
+                                <div className="text-center">
+                                    <h3 className="text-2xl font-bold mb-2">Annual Savings</h3>
+                                    <div className="text-6xl font-bold mb-4">${roi.savings.toLocaleString()}</div>
+                                    <p className="text-xl opacity-90 mb-6">That's a {roi.roi}% ROI in Year 1</p>
+                                    
+                                    <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mt-8">
+                                        <div className="bg-white/20 rounded-lg p-4 backdrop-blur">
+                                            <div className="text-3xl font-bold">70%</div>
+                                            <div className="text-sm opacity-90">Cost Reduction</div>
+                                        </div>
+                                        <div className="bg-white/20 rounded-lg p-4 backdrop-blur">
+                                            <div className="text-3xl font-bold">8 wks</div>
+                                            <div className="text-sm opacity-90">Deployment</div>
+                                        </div>
+                                        <div className="bg-white/20 rounded-lg p-4 backdrop-blur">
+                                            <div className="text-3xl font-bold">0%</div>
+                                            <div className="text-sm opacity-90">Turnover</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-8 text-center">
+                                <button
+                                    onClick={() => navigate('comparison')}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg transition"
+                                >
+                                    See Side-by-Side Comparison →
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Comparison Screen */}
+                    {screen === 'comparison' && (
+                        <div className="max-w-6xl mx-auto px-6 py-8 fade-in">
+                            <div className="mb-8">
+                                <h2 className="text-3xl font-bold text-slate-900 mb-2">The Clear Difference</h2>
+                                <p className="text-slate-600">Traditional BDC vs Neuralogic AI</p>
+                            </div>
+
+                            <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                                <table className="w-full">
+                                    <thead className="bg-slate-100">
+                                        <tr>
+                                            <th className="px-6 py-4 text-left text-slate-700 font-semibold">Capability</th>
+                                            <th className="px-6 py-4 text-center text-red-700 font-semibold">Traditional BDC</th>
+                                            <th className="px-6 py-4 text-center text-green-700 font-semibold">Neuralogic AI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200">
+                                        <tr>
+                                            <td className="px-6 py-4 font-medium text-slate-900">Lead Response Time</td>
+                                            <td className="px-6 py-4 text-center text-red-600">47 minutes avg</td>
+                                            <td className="px-6 py-4 text-center text-green-600 font-bold">&lt;30 seconds</td>
+                                        </tr>
+                                        <tr className="bg-slate-50">
+                                            <td className="px-6 py-4 font-medium text-slate-900">Availability</td>
+                                            <td className="px-6 py-4 text-center text-red-600">Business hours only</td>
+                                            <td className="px-6 py-4 text-center text-green-600 font-bold">24/7/365</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="px-6 py-4 font-medium text-slate-900">Lead Coverage</td>
+                                            <td className="px-6 py-4 text-center text-red-600">~60% contacted</td>
+                                            <td className="px-6 py-4 text-center text-green-600 font-bold">100%</td>
+                                        </tr>
+                                        <tr className="bg-slate-50">
+                                            <td className="px-6 py-4 font-medium text-slate-900">Annual Turnover</td>
+                                            <td className="px-6 py-4 text-center text-red-600">67%</td>
+                                            <td className="px-6 py-4 text-center text-green-600 font-bold">0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="px-6 py-4 font-medium text-slate-900">Training Time</td>
+                                            <td className="px-6 py-4 text-center text-red-600">90 days per rep</td>
+                                            <td className="px-6 py-4 text-center text-green-600 font-bold">0 days</td>
+                                        </tr>
+                                        <tr className="bg-slate-50">
+                                            <td className="px-6 py-4 font-medium text-slate-900">Consistency</td>
+                                            <td className="px-6 py-4 text-center text-red-600">Varies by rep</td>
+                                            <td className="px-6 py-4 text-center text-green-600 font-bold">Perfect every time</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="px-6 py-4 font-medium text-slate-900">Scalability</td>
+                                            <td className="px-6 py-4 text-center text-red-600">Linear cost increase</td>
+                                            <td className="px-6 py-4 text-center text-green-600 font-bold">Instant, no added cost</td>
+                                        </tr>
+                                        <tr className="bg-blue-50">
+                                            <td className="px-6 py-4 font-bold text-slate-900">Annual Cost ({bdcTeamSize} person team)</td>
+                                            <td className="px-6 py-4 text-center text-red-600 font-bold text-lg">${roi.currentCost.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-center text-green-600 font-bold text-lg">${roi.neuralogicCost.toLocaleString()}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="mt-8 text-center">
+                                <p className="text-xl text-slate-700 mb-6">
+                                    Ready to see how this works in your dealership?
+                                </p>
+                                <div className="flex gap-4 justify-center">
+                                    <button
+                                        onClick={() => navigate('bdc-demo')}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg transition"
+                                    >
+                                        See Demo Again
+                                    </button>
+                                    <button
+                                        onClick={() => window.open('https://calendly.com/neuralogic', '_blank')}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg transition"
+                                    >
+                                        Schedule Deep Dive →
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('app'));
+        root.render(<AutoDealerDemo />);
+    </script>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</body>
+</html>
