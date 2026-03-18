@@ -3,686 +3,662 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neuralogic Automotive Demo</title>
+    <title>BDC Agent - AutoBDC AI Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideIn {
-            from { transform: translateX(-20px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .fade-in { animation: fadeIn 0.5s ease-out; }
-        .slide-in { animation: slideIn 0.5s ease-out; }
-        .pulse { animation: pulse 2s ease-in-out infinite; }
-        
-        .chat-message {
-            animation: slideIn 0.3s ease-out;
-        }
-        
-        .typing-indicator {
-            display: inline-flex;
-            gap: 4px;
-        }
-        .typing-indicator span {
-            width: 8px;
-            height: 8px;
-            background: #9ca3af;
-            border-radius: 50%;
-            animation: pulse 1.4s ease-in-out infinite;
-        }
-        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-
-        .metric-card {
-            transition: all 0.3s ease;
-        }
-        .metric-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-
-        /* Custom scrollbar */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-    </style>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    </head>
-<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
-    <div id="app"></div>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .status-badge { @apply px-3 py-1 rounded-full text-xs font-semibold; }
+        .status-new { @apply bg-yellow-100 text-yellow-800; }
+        .status-contacted { @apply bg-blue-100 text-blue-800; }
+        .status-appointment_set { @apply bg-green-100 text-green-800; }
+        .status-sold { @apply bg-purple-100 text-purple-800; }
+        .status-lost { @apply bg-red-100 text-red-800; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Main Demo App
-        function AutoDealerDemo() {
-            const [screen, setScreen] = useState('welcome'); // welcome, setup, bdc-demo, roi, comparison
-            const [dealerName, setDealerName] = useState('');
-            const [bdcTeamSize, setBdcTeamSize] = useState(8);
-            const [monthlyLeads, setMonthlyLeads] = useState(500);
-            const [demoStep, setDemoStep] = useState(0);
-            const [chatMessages, setChatMessages] = useState([]);
-            const [isTyping, setIsTyping] = useState(false);
-            const [leadData, setLeadData] = useState({
-                name: 'Michael Thompson',
-                email: 'mthompson@email.com',
+        // API Configuration
+        const API_URL = 'http://localhost:8000/api';
+        const api = axios.create({ baseURL: API_URL });
+
+        // Sample Data
+        const SAMPLE_LEADS = [
+            {
+                id: 1,
+                name: 'John Smith',
+                email: 'john.smith@email.com',
+                phone: '(555) 123-4567',
+                source: 'Website',
+                interest: '2024 Honda Accord',
+                status: 'new',
+                priority: 'high',
+                lastContact: '5 minutes ago',
+                created: '2026-03-18T10:30:00',
+                notes: 'Interested in test drive this weekend. Prefers Saturday morning.',
+                conversation: [
+                    { sender: 'customer', message: "Hi, I'm interested in the 2024 Honda Accord. What's your best price?", time: '10:30 AM', date: 'Today' },
+                    { sender: 'ai', message: "Hello John! Thank you for your interest in the 2024 Accord Sport. The MSRP is $32,450 and we currently have several in stock. Are you looking to trade in a vehicle?", time: '10:31 AM', date: 'Today' },
+                    { sender: 'customer', message: "Yes, I have a 2019 Camry with 45k miles", time: '10:33 AM', date: 'Today' },
+                    { sender: 'ai', message: "Great! A 2019 Camry with that mileage typically trades for $18,000-$20,000. Would you like to schedule a test drive so we can provide an accurate appraisal?", time: '10:34 AM', date: 'Today' }
+                ]
+            },
+            {
+                id: 2,
+                name: 'Sarah Johnson',
+                email: 'sarah.j@email.com',
                 phone: '(555) 234-5678',
-                vehicle: '2024 Honda Accord',
-                timeframe: 'This week'
-            });
+                source: 'Phone Call',
+                interest: '2024 Toyota Camry',
+                status: 'contacted',
+                priority: 'medium',
+                lastContact: '1 hour ago',
+                created: '2026-03-18T09:00:00',
+                notes: 'Appointment scheduled for tomorrow at 2:00 PM. Confirmed via email.',
+                conversation: [
+                    { sender: 'customer', message: 'Do you have any Camry in stock?', time: '9:00 AM', date: 'Today' },
+                    { sender: 'ai', message: 'Yes! We have 5 Camry models available, including the popular XSE and Hybrid models. What features are most important to you?', time: '9:01 AM', date: 'Today' }
+                ]
+            },
+            {
+                id: 3,
+                name: 'Mike Davis',
+                email: 'mdavis@email.com',
+                phone: '(555) 345-6789',
+                source: 'Facebook Ad',
+                interest: '2024 Ford F-150',
+                status: 'appointment_set',
+                priority: 'high',
+                lastContact: '3 hours ago',
+                created: '2026-03-17T16:00:00',
+                notes: 'Test drive confirmed for Thursday at 10:00 AM. Interested in XLT trim.',
+                conversation: []
+            },
+            {
+                id: 4,
+                name: 'Emily Brown',
+                email: 'emily.brown@email.com',
+                phone: '(555) 456-7890',
+                source: 'AutoTrader',
+                interest: '2024 Chevrolet Silverado',
+                status: 'new',
+                priority: 'medium',
+                lastContact: '10 minutes ago',
+                created: '2026-03-18T10:20:00',
+                notes: 'Requested pricing information and available colors.',
+                conversation: []
+            }
+        ];
 
-            // Navigate between screens
-            const navigate = (screenName) => {
-                setScreen(screenName);
-                setDemoStep(0);
-                setChatMessages([]);
+        // Main App Component
+        function App() {
+            const [user, setUser] = useState(null);
+            const [currentView, setCurrentView] = useState('dashboard');
+            const [leads, setLeads] = useState(SAMPLE_LEADS);
+            const [selectedLead, setSelectedLead] = useState(null);
+            const [showLeadModal, setShowLeadModal] = useState(false);
+
+            useEffect(() => {
+                const storedUser = localStorage.getItem('user');
+                if (storedUser) setUser(JSON.parse(storedUser));
+            }, []);
+
+            const handleLogin = (userData, token) => {
+                setUser(userData);
+                localStorage.setItem('user', JSON.stringify(userData));
+                localStorage.setItem('token', token);
             };
 
-            // Start BDC demo sequence
-            const startBDCDemo = () => {
-                setScreen('bdc-demo');
-                setDemoStep(1);
-                // Initial lead notification
-                setTimeout(() => addMessage('system', 'New lead received from website - 3:47 PM'), 500);
+            const handleLogout = () => {
+                setUser(null);
+                localStorage.removeItem('user');
+                localStorage.removeItem('token');
             };
 
-            // Add chat message
-            const addMessage = (sender, text, delay = 0) => {
-                setTimeout(() => {
-                    setIsTyping(true);
-                    setTimeout(() => {
-                        setChatMessages(prev => [...prev, { sender, text, timestamp: new Date() }]);
-                        setIsTyping(false);
-                    }, sender === 'ai' ? 1500 : 500);
-                }, delay);
-            };
-
-            // Advance demo steps
-            const nextStep = () => {
-                const step = demoStep + 1;
-                setDemoStep(step);
-
-                // BDC Demo sequence
-                if (screen === 'bdc-demo') {
-                    switch(step) {
-                        case 2:
-                            addMessage('ai', `Hi ${leadData.name}! Thanks for your interest in the ${leadData.vehicle}. I'm here to help you get started. Are you looking to schedule a test drive?`);
-                            break;
-                        case 3:
-                            addMessage('customer', 'Yes, I am. What times do you have available this week?', 1000);
-                            break;
-                        case 4:
-                            addMessage('ai', 'Great! I have several openings. Would Tuesday at 2:00 PM, Wednesday at 10:00 AM, or Thursday at 4:00 PM work better for you?', 2000);
-                            break;
-                        case 5:
-                            addMessage('customer', 'Wednesday at 10 works perfect.', 1000);
-                            break;
-                        case 6:
-                            addMessage('ai', 'Perfect! I have you scheduled for Wednesday at 10:00 AM. You'll be meeting with Sarah Johnson, one of our Honda specialists. I'll send a confirmation text to (555) 234-5678. Is there anything else I can help you with today?', 2000);
-                            break;
-                        case 7:
-                            addMessage('customer', 'No, that's it. Thanks!', 1000);
-                            break;
-                        case 8:
-                            addMessage('ai', 'You're very welcome! We're looking forward to seeing you Wednesday. Have a great day!', 1500);
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            };
-
-            // Calculate ROI
-            const calculateROI = () => {
-                const currentCost = bdcTeamSize * 60000; // $60K per BDC rep
-                const turnoverCost = bdcTeamSize * 15000; // $15K turnover cost per rep
-                const lostLeadCost = monthlyLeads * 0.78 * 300 * 12; // 78% lost leads @ $300 potential profit
-                const totalCurrentCost = currentCost + turnoverCost + lostLeadCost;
-                
-                const neuralogicCost = currentCost * 0.3; // 70% reduction
-                const savings = totalCurrentCost - neuralogicCost;
-                const roi = (savings / neuralogicCost * 100).toFixed(0);
-
-                return {
-                    currentCost,
-                    turnoverCost,
-                    lostLeadCost,
-                    totalCurrentCost,
-                    neuralogicCost,
-                    savings,
-                    roi
-                };
-            };
-
-            const roi = calculateROI();
+            if (!user) {
+                return <LoginScreen onLogin={handleLogin} />;
+            }
 
             return (
-                <div className="min-h-screen">
-                    {/* Header */}
-                    <header className="bg-white border-b border-slate-200 shadow-sm">
+                <div className="min-h-screen bg-gray-50">
+                    <nav className="bg-blue-900 text-white shadow-lg">
                         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                                    <span className="text-white font-bold text-xl">N</span>
-                                </div>
-                                <div>
-                                    <h1 className="text-xl font-bold text-slate-900">Neuralogic</h1>
-                                    <p className="text-xs text-slate-500">Automotive AI Demo</p>
-                                </div>
-                            </div>
-                            {screen !== 'welcome' && (
-                                <button 
-                                    onClick={() => navigate('welcome')}
-                                    className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 transition"
-                                >
-                                    ← Back to Home
-                                </button>
-                            )}
-                        </div>
-                    </header>
-
-                    {/* Welcome Screen */}
-                    {screen === 'welcome' && (
-                        <div className="max-w-4xl mx-auto px-6 py-16 fade-in">
-                            <div className="text-center mb-12">
-                                <h2 className="text-4xl font-bold text-slate-900 mb-4">
-                                    Autonomous BDC Replacement Demo
-                                </h2>
-                                <p className="text-xl text-slate-600">
-                                    See how we replace your $480K BDC team with AI that responds in &lt;30 seconds
-                                </p>
-                            </div>
-
-                            <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-                                <h3 className="text-2xl font-bold text-slate-900 mb-6">Quick Setup</h3>
-                                
-                                <div className="space-y-6">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                            Dealership Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={dealerName}
-                                            onChange={(e) => setDealerName(e.target.value)}
-                                            placeholder="e.g., ABC Motors"
-                                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                            Current BDC Team Size
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={bdcTeamSize}
-                                            onChange={(e) => setBdcTeamSize(parseInt(e.target.value) || 0)}
-                                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                                        />
-                                        <p className="text-sm text-slate-500 mt-1">
-                                            Estimated annual cost: ${(bdcTeamSize * 60000).toLocaleString()}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                            Monthly Lead Volume
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={monthlyLeads}
-                                            onChange={(e) => setMonthlyLeads(parseInt(e.target.value) || 0)}
-                                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                                        />
-                                    </div>
+                            <div className="flex items-center gap-4">
+                                <a href="/index.html" className="text-blue-300 hover:text-white transition text-sm">
+                                    ← Back to Portal
+                                </a>
+                                <span className="text-gray-400">|</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-2xl">📞</span>
+                                    <h1 className="text-xl font-bold">AutoBDC AI</h1>
                                 </div>
                             </div>
-
-                            <div className="grid md:grid-cols-3 gap-6">
+                            <div className="flex items-center gap-4">
+                                <span className="text-sm opacity-75">👤 {user.name}</span>
                                 <button
-                                    onClick={startBDCDemo}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition"
+                                    onClick={handleLogout}
+                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold transition-colors"
                                 >
-                                    🤖 BDC Demo
-                                    <p className="text-sm font-normal mt-2 opacity-90">See autonomous lead handling</p>
-                                </button>
-
-                                <button
-                                    onClick={() => navigate('roi')}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition"
-                                >
-                                    💰 ROI Calculator
-                                    <p className="text-sm font-normal mt-2 opacity-90">Calculate your savings</p>
-                                </button>
-
-                                <button
-                                    onClick={() => navigate('comparison')}
-                                    className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition"
-                                >
-                                    📊 Comparison
-                                    <p className="text-sm font-normal mt-2 opacity-90">Old vs New way</p>
+                                    Logout
                                 </button>
                             </div>
                         </div>
-                    )}
+                    </nav>
 
-                    {/* BDC Demo Screen */}
-                    {screen === 'bdc-demo' && (
-                        <div className="max-w-7xl mx-auto px-6 py-8 fade-in">
-                            <div className="mb-6">
-                                <h2 className="text-3xl font-bold text-slate-900 mb-2">Live BDC Demo</h2>
-                                <p className="text-slate-600">Watch how the AI handles a lead in real-time</p>
-                            </div>
+                    <div className="flex">
+                        <aside className="w-64 bg-white shadow-lg min-h-screen">
+                            <nav className="p-4">
+                                <MenuItem
+                                    icon="📊"
+                                    label="Dashboard"
+                                    active={currentView === 'dashboard'}
+                                    onClick={() => setCurrentView('dashboard')}
+                                />
+                                <MenuItem
+                                    icon="📋"
+                                    label="All Leads"
+                                    active={currentView === 'leads'}
+                                    onClick={() => setCurrentView('leads')}
+                                    badge={leads.length}
+                                />
+                                <MenuItem
+                                    icon="📞"
+                                    label="Call Queue"
+                                    active={currentView === 'calls'}
+                                    onClick={() => setCurrentView('calls')}
+                                />
+                                <MenuItem
+                                    icon="📅"
+                                    label="Appointments"
+                                    active={currentView === 'appointments'}
+                                    onClick={() => setCurrentView('appointments')}
+                                />
+                                <MenuItem
+                                    icon="📈"
+                                    label="Reports"
+                                    active={currentView === 'reports'}
+                                    onClick={() => setCurrentView('reports')}
+                                />
+                            </nav>
+                        </aside>
 
-                            <div className="grid lg:grid-cols-2 gap-6">
-                                {/* Left: Lead Form Simulation */}
-                                <div className="bg-white rounded-xl shadow-lg p-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-lg font-bold text-slate-900">Dealership Website</h3>
-                                        <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">
-                                            LIVE
-                                        </span>
-                                    </div>
+                        <main className="flex-1 p-8">
+                            {currentView === 'dashboard' && <Dashboard leads={leads} onViewLead={(lead) => {setSelectedLead(lead); setShowLeadModal(true);}} />}
+                            {currentView === 'leads' && <LeadsView leads={leads} onViewLead={(lead) => {setSelectedLead(lead); setShowLeadModal(true);}} />}
+                            {currentView === 'calls' && <CallQueue leads={leads.filter(l => l.status === 'new')} />}
+                            {currentView === 'appointments' && <Appointments leads={leads.filter(l => l.status === 'appointment_set')} />}
+                            {currentView === 'reports' && <Reports leads={leads} />}
+                        </main>
+                    </div>
 
-                                    <div className="bg-slate-50 rounded-lg p-6 border-2 border-slate-200">
-                                        <h4 className="text-xl font-bold text-slate-900 mb-4">Request Info</h4>
-                                        
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-                                                <input
-                                                    type="text"
-                                                    value={leadData.name}
-                                                    readOnly
-                                                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                                                <input
-                                                    type="email"
-                                                    value={leadData.email}
-                                                    readOnly
-                                                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                                                <input
-                                                    type="tel"
-                                                    value={leadData.phone}
-                                                    readOnly
-                                                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-slate-700 mb-1">Vehicle Interest</label>
-                                                <input
-                                                    type="text"
-                                                    value={leadData.vehicle}
-                                                    readOnly
-                                                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-slate-700 mb-1">Timeframe</label>
-                                                <input
-                                                    type="text"
-                                                    value={leadData.timeframe}
-                                                    readOnly
-                                                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded"
-                                                />
-                                            </div>
-
-                                            {demoStep === 0 && (
-                                                <button
-                                                    onClick={nextStep}
-                                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition"
-                                                >
-                                                    Submit Request
-                                                </button>
-                                            )}
-
-                                            {demoStep >= 1 && (
-                                                <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4 text-center">
-                                                    <div className="text-green-700 font-semibold mb-1">✓ Request Submitted</div>
-                                                    <div className="text-sm text-green-600">Response time: &lt;30 seconds</div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Right: Chat Interface */}
-                                <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-lg font-bold text-slate-900">AI Response System</h3>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                            <span className="text-xs text-slate-600">Active</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex-1 bg-slate-50 rounded-lg p-4 mb-4 overflow-y-auto custom-scrollbar" style={{minHeight: '400px', maxHeight: '400px'}}>
-                                        {chatMessages.length === 0 && (
-                                            <div className="flex items-center justify-center h-full text-slate-400">
-                                                Waiting for lead...
-                                            </div>
-                                        )}
-
-                                        {chatMessages.map((msg, idx) => (
-                                            <div key={idx} className={`chat-message mb-4 ${msg.sender === 'ai' || msg.sender === 'system' ? 'text-left' : 'text-right'}`}>
-                                                {msg.sender === 'system' && (
-                                                    <div className="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-2 rounded-lg inline-block text-sm">
-                                                        🔔 {msg.text}
-                                                    </div>
-                                                )}
-
-                                                {msg.sender === 'ai' && (
-                                                    <div className="inline-block max-w-[80%]">
-                                                        <div className="bg-blue-600 text-white px-4 py-3 rounded-2xl rounded-tl-sm">
-                                                            {msg.text}
-                                                        </div>
-                                                        <div className="text-xs text-slate-400 mt-1 ml-2">
-                                                            Neuralogic AI • {msg.timestamp.toLocaleTimeString()}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {msg.sender === 'customer' && (
-                                                    <div className="inline-block max-w-[80%]">
-                                                        <div className="bg-slate-200 text-slate-900 px-4 py-3 rounded-2xl rounded-tr-sm">
-                                                            {msg.text}
-                                                        </div>
-                                                        <div className="text-xs text-slate-400 mt-1 mr-2">
-                                                            {leadData.name} • {msg.timestamp.toLocaleTimeString()}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-
-                                        {isTyping && (
-                                            <div className="text-left mb-4">
-                                                <div className="bg-slate-200 px-4 py-3 rounded-2xl rounded-tl-sm inline-block">
-                                                    <div className="typing-indicator">
-                                                        <span></span>
-                                                        <span></span>
-                                                        <span></span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {demoStep > 0 && demoStep < 9 && (
-                                        <button
-                                            onClick={nextStep}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition"
-                                        >
-                                            {demoStep === 1 ? 'AI Responds →' : 'Continue →'}
-                                        </button>
-                                    )}
-
-                                    {demoStep === 9 && (
-                                        <div className="space-y-3">
-                                            <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4 text-center">
-                                                <div className="text-green-700 font-bold mb-1">✓ Appointment Booked</div>
-                                                <div className="text-sm text-green-600">Total time: 4 minutes 23 seconds</div>
-                                                <div className="text-xs text-green-600 mt-1">Human involvement: 0%</div>
-                                            </div>
-                                            <button
-                                                onClick={() => navigate('roi')}
-                                                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition"
-                                            >
-                                                See ROI Savings →
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Stats Bar */}
-                            {demoStep >= 1 && (
-                                <div className="mt-6 grid grid-cols-4 gap-4 fade-in">
-                                    <div className="bg-white rounded-lg shadow p-4 text-center metric-card">
-                                        <div className="text-2xl font-bold text-blue-600">&lt;30s</div>
-                                        <div className="text-sm text-slate-600">Response Time</div>
-                                    </div>
-                                    <div className="bg-white rounded-lg shadow p-4 text-center metric-card">
-                                        <div className="text-2xl font-bold text-green-600">100%</div>
-                                        <div className="text-sm text-slate-600">Lead Coverage</div>
-                                    </div>
-                                    <div className="bg-white rounded-lg shadow p-4 text-center metric-card">
-                                        <div className="text-2xl font-bold text-purple-600">24/7</div>
-                                        <div className="text-sm text-slate-600">Availability</div>
-                                    </div>
-                                    <div className="bg-white rounded-lg shadow p-4 text-center metric-card">
-                                        <div className="text-2xl font-bold text-orange-600">$0</div>
-                                        <div className="text-sm text-slate-600">Turnover Cost</div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* ROI Calculator Screen */}
-                    {screen === 'roi' && (
-                        <div className="max-w-5xl mx-auto px-6 py-8 fade-in">
-                            <div className="mb-8">
-                                <h2 className="text-3xl font-bold text-slate-900 mb-2">ROI Calculator</h2>
-                                <p className="text-slate-600">Your custom savings breakdown</p>
-                            </div>
-
-                            <div className="grid md:grid-cols-2 gap-8">
-                                {/* Current Costs */}
-                                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6">
-                                    <h3 className="text-xl font-bold text-red-900 mb-4 flex items-center gap-2">
-                                        <span>❌</span> Current Annual Costs
-                                    </h3>
-                                    
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-slate-700">BDC Team Payroll</span>
-                                            <span className="font-bold text-slate-900">${roi.currentCost.toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-slate-700">Turnover Costs</span>
-                                            <span className="font-bold text-slate-900">${roi.turnoverCost.toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-slate-700">Lost Lead Revenue</span>
-                                            <span className="font-bold text-slate-900">${roi.lostLeadCost.toLocaleString()}</span>
-                                        </div>
-                                        <div className="border-t-2 border-red-300 pt-4">
-                                            <div className="flex justify-between items-center">
-                                                <span className="font-bold text-red-900">TOTAL</span>
-                                                <span className="font-bold text-2xl text-red-900">${roi.totalCurrentCost.toLocaleString()}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Neuralogic Costs */}
-                                <div className="bg-green-50 border-2 border-green-200 rounded-xl p-6">
-                                    <h3 className="text-xl font-bold text-green-900 mb-4 flex items-center gap-2">
-                                        <span>✅</span> With Neuralogic
-                                    </h3>
-                                    
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-slate-700">Platform Cost</span>
-                                            <span className="font-bold text-slate-900">${roi.neuralogicCost.toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-slate-700">Turnover Costs</span>
-                                            <span className="font-bold text-slate-900">$0</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-slate-700">Lost Lead Revenue</span>
-                                            <span className="font-bold text-slate-900">$0</span>
-                                        </div>
-                                        <div className="border-t-2 border-green-300 pt-4">
-                                            <div className="flex justify-between items-center">
-                                                <span className="font-bold text-green-900">TOTAL</span>
-                                                <span className="font-bold text-2xl text-green-900">${roi.neuralogicCost.toLocaleString()}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Savings Summary */}
-                            <div className="mt-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
-                                <div className="text-center">
-                                    <h3 className="text-2xl font-bold mb-2">Annual Savings</h3>
-                                    <div className="text-6xl font-bold mb-4">${roi.savings.toLocaleString()}</div>
-                                    <p className="text-xl opacity-90 mb-6">That's a {roi.roi}% ROI in Year 1</p>
-                                    
-                                    <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mt-8">
-                                        <div className="bg-white/20 rounded-lg p-4 backdrop-blur">
-                                            <div className="text-3xl font-bold">70%</div>
-                                            <div className="text-sm opacity-90">Cost Reduction</div>
-                                        </div>
-                                        <div className="bg-white/20 rounded-lg p-4 backdrop-blur">
-                                            <div className="text-3xl font-bold">8 wks</div>
-                                            <div className="text-sm opacity-90">Deployment</div>
-                                        </div>
-                                        <div className="bg-white/20 rounded-lg p-4 backdrop-blur">
-                                            <div className="text-3xl font-bold">0%</div>
-                                            <div className="text-sm opacity-90">Turnover</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="mt-8 text-center">
-                                <button
-                                    onClick={() => navigate('comparison')}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg transition"
-                                >
-                                    See Side-by-Side Comparison →
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Comparison Screen */}
-                    {screen === 'comparison' && (
-                        <div className="max-w-6xl mx-auto px-6 py-8 fade-in">
-                            <div className="mb-8">
-                                <h2 className="text-3xl font-bold text-slate-900 mb-2">The Clear Difference</h2>
-                                <p className="text-slate-600">Traditional BDC vs Neuralogic AI</p>
-                            </div>
-
-                            <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-                                <table className="w-full">
-                                    <thead className="bg-slate-100">
-                                        <tr>
-                                            <th className="px-6 py-4 text-left text-slate-700 font-semibold">Capability</th>
-                                            <th className="px-6 py-4 text-center text-red-700 font-semibold">Traditional BDC</th>
-                                            <th className="px-6 py-4 text-center text-green-700 font-semibold">Neuralogic AI</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-200">
-                                        <tr>
-                                            <td className="px-6 py-4 font-medium text-slate-900">Lead Response Time</td>
-                                            <td className="px-6 py-4 text-center text-red-600">47 minutes avg</td>
-                                            <td className="px-6 py-4 text-center text-green-600 font-bold">&lt;30 seconds</td>
-                                        </tr>
-                                        <tr className="bg-slate-50">
-                                            <td className="px-6 py-4 font-medium text-slate-900">Availability</td>
-                                            <td className="px-6 py-4 text-center text-red-600">Business hours only</td>
-                                            <td className="px-6 py-4 text-center text-green-600 font-bold">24/7/365</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="px-6 py-4 font-medium text-slate-900">Lead Coverage</td>
-                                            <td className="px-6 py-4 text-center text-red-600">~60% contacted</td>
-                                            <td className="px-6 py-4 text-center text-green-600 font-bold">100%</td>
-                                        </tr>
-                                        <tr className="bg-slate-50">
-                                            <td className="px-6 py-4 font-medium text-slate-900">Annual Turnover</td>
-                                            <td className="px-6 py-4 text-center text-red-600">67%</td>
-                                            <td className="px-6 py-4 text-center text-green-600 font-bold">0%</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="px-6 py-4 font-medium text-slate-900">Training Time</td>
-                                            <td className="px-6 py-4 text-center text-red-600">90 days per rep</td>
-                                            <td className="px-6 py-4 text-center text-green-600 font-bold">0 days</td>
-                                        </tr>
-                                        <tr className="bg-slate-50">
-                                            <td className="px-6 py-4 font-medium text-slate-900">Consistency</td>
-                                            <td className="px-6 py-4 text-center text-red-600">Varies by rep</td>
-                                            <td className="px-6 py-4 text-center text-green-600 font-bold">Perfect every time</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="px-6 py-4 font-medium text-slate-900">Scalability</td>
-                                            <td className="px-6 py-4 text-center text-red-600">Linear cost increase</td>
-                                            <td className="px-6 py-4 text-center text-green-600 font-bold">Instant, no added cost</td>
-                                        </tr>
-                                        <tr className="bg-blue-50">
-                                            <td className="px-6 py-4 font-bold text-slate-900">Annual Cost ({bdcTeamSize} person team)</td>
-                                            <td className="px-6 py-4 text-center text-red-600 font-bold text-lg">${roi.currentCost.toLocaleString()}</td>
-                                            <td className="px-6 py-4 text-center text-green-600 font-bold text-lg">${roi.neuralogicCost.toLocaleString()}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div className="mt-8 text-center">
-                                <p className="text-xl text-slate-700 mb-6">
-                                    Ready to see how this works in your dealership?
-                                </p>
-                                <div className="flex gap-4 justify-center">
-                                    <button
-                                        onClick={() => navigate('bdc-demo')}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg transition"
-                                    >
-                                        See Demo Again
-                                    </button>
-                                    <button
-                                        onClick={() => window.open('https://calendly.com/neuralogic', '_blank')}
-                                        className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg transition"
-                                    >
-                                        Schedule Deep Dive →
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                    {showLeadModal && selectedLead && (
+                        <LeadModal 
+                            lead={selectedLead} 
+                            onClose={() => setShowLeadModal(false)}
+                            onUpdateStatus={(newStatus) => {
+                                setLeads(leads.map(l => l.id === selectedLead.id ? {...l, status: newStatus} : l));
+                                setShowLeadModal(false);
+                            }}
+                        />
                     )}
                 </div>
             );
         }
 
-        // Render the app
-        const root = ReactDOM.createRoot(document.getElementById('app'));
-        root.render(<AutoDealerDemo />);
+        // Login Screen
+        function LoginScreen({ onLogin }) {
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const userData = { name: username || 'Demo User', role: 'BDC Agent' };
+                const token = 'demo-token-' + Date.now();
+                onLogin(userData, token);
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+                        <div className="text-center mb-8">
+                            <span className="text-6xl">📞</span>
+                            <h1 className="text-3xl font-bold text-gray-900 mt-4">AutoBDC AI</h1>
+                            <p className="text-gray-600 mt-2">Lead Response Automation</p>
+                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
+                                <input
+                                    type="text"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Enter username"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Enter password"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg transition-colors"
+                            >
+                                Login to AutoBDC
+                            </button>
+                        </form>
+                        <p className="text-center text-sm text-gray-500 mt-6">
+                            Demo Mode - Enter any credentials
+                        </p>
+                    </div>
+                </div>
+            );
+        }
+
+        // Menu Item Component
+        function MenuItem({ icon, label, active, onClick, badge }) {
+            return (
+                <button
+                    onClick={onClick}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors mb-2 ${
+                        active ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                >
+                    <span className="text-xl">{icon}</span>
+                    <span className="font-medium flex-1 text-left">{label}</span>
+                    {badge && (
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            active ? 'bg-white text-blue-600' : 'bg-blue-100 text-blue-600'
+                        }`}>
+                            {badge}
+                        </span>
+                    )}
+                </button>
+            );
+        }
+
+        // Dashboard View
+        function Dashboard({ leads, onViewLead }) {
+            const stats = {
+                totalLeads: leads.length,
+                newLeads: leads.filter(l => l.status === 'new').length,
+                contacted: leads.filter(l => l.status === 'contacted').length,
+                appointments: leads.filter(l => l.status === 'appointment_set').length,
+                avgResponseTime: '42s'
+            };
+
+            return (
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Dashboard</h1>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <StatCard title="Today's Leads" value={stats.totalLeads} subtitle="+12 from yesterday" color="blue" />
+                        <StatCard title="Appointments Set" value={stats.appointments} subtitle="25.5% conversion" color="green" />
+                        <StatCard title="Avg Response" value={stats.avgResponseTime} subtitle="Target: < 60s" color="purple" />
+                        <StatCard title="Follow-ups Due" value="8" subtitle="Next in 15 min" color="yellow" />
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Leads</h2>
+                        <div className="space-y-4">
+                            {leads.slice(0, 5).map(lead => (
+                                <div 
+                                    key={lead.id}
+                                    onClick={() => onViewLead(lead)}
+                                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-2xl">
+                                            👤
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-gray-900">{lead.name}</p>
+                                            <p className="text-sm text-gray-600">{lead.interest}</p>
+                                            <p className="text-xs text-gray-500">{lead.source} • {lead.lastContact}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className={`status-badge status-${lead.status}`}>
+                                            {lead.status.replace('_', ' ')}
+                                        </span>
+                                        <span className="text-blue-600 font-medium">View →</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Leads View
+        function LeadsView({ leads, onViewLead }) {
+            const [filter, setFilter] = useState('all');
+            const [search, setSearch] = useState('');
+
+            const filteredLeads = leads.filter(lead => {
+                const matchesFilter = filter === 'all' || lead.status === filter;
+                const matchesSearch = lead.name.toLowerCase().includes(search.toLowerCase()) ||
+                                     lead.interest.toLowerCase().includes(search.toLowerCase());
+                return matchesFilter && matchesSearch;
+            });
+
+            return (
+                <div>
+                    <div className="flex items-center justify-between mb-8">
+                        <h1 className="text-3xl font-bold text-gray-900">All Leads</h1>
+                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition">
+                            + New Lead
+                        </button>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
+                        <div className="flex gap-4">
+                            <select 
+                                value={filter}
+                                onChange={(e) => setFilter(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg"
+                            >
+                                <option value="all">All Leads</option>
+                                <option value="new">New</option>
+                                <option value="contacted">Contacted</option>
+                                <option value="appointment_set">Appointment Set</option>
+                            </select>
+                            <input 
+                                type="search"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search leads..."
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                        <table className="w-full">
+                            <thead className="bg-gray-50 border-b">
+                                <tr>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Customer</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Source</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Interest</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Last Contact</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {filteredLeads.map(lead => (
+                                    <tr key={lead.id} onClick={() => onViewLead(lead)} className="hover:bg-gray-50 cursor-pointer">
+                                        <td className="px-6 py-4">
+                                            <p className="font-semibold text-gray-900">{lead.name}</p>
+                                            <p className="text-sm text-gray-500">{lead.email}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
+                                                {lead.source}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-900">{lead.interest}</td>
+                                        <td className="px-6 py-4">
+                                            <span className={`status-badge status-${lead.status}`}>
+                                                {lead.status.replace('_', ' ')}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-600">{lead.lastContact}</td>
+                                        <td className="px-6 py-4">
+                                            <button className="text-blue-600 hover:text-blue-800 font-semibold text-sm">
+                                                View →
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+
+        // Lead Modal
+        function LeadModal({ lead, onClose, onUpdateStatus }) {
+            const [newMessage, setNewMessage] = useState('');
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900">{lead.name}</h2>
+                                    <p className="text-gray-600">{lead.interest}</p>
+                                </div>
+                                <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-3xl">×</button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6 mb-6">
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-sm text-gray-600">Email</label>
+                                        <p className="font-medium">{lead.email}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm text-gray-600">Phone</label>
+                                        <p className="font-medium">{lead.phone}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-sm text-gray-600">Source</label>
+                                        <p className="font-medium">{lead.source}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm text-gray-600">Status</label>
+                                        <span className={`status-badge status-${lead.status}`}>
+                                            {lead.status.replace('_', ' ')}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mb-6">
+                                <label className="text-sm text-gray-600 mb-2 block">Notes</label>
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                    <p className="text-gray-900">{lead.notes}</p>
+                                </div>
+                            </div>
+
+                            <div className="mb-6">
+                                <h3 className="text-lg font-bold text-gray-900 mb-4">Conversation History</h3>
+                                <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
+                                    {lead.conversation.length > 0 ? (
+                                        lead.conversation.map((msg, idx) => (
+                                            <div 
+                                                key={idx}
+                                                className={`p-4 rounded-lg ${
+                                                    msg.sender === 'customer' ? 'bg-gray-100' : 'bg-blue-50'
+                                                }`}
+                                            >
+                                                <div className="text-xs text-gray-600 mb-1">
+                                                    {msg.sender === 'customer' ? 'Customer' : 'AutoBDC AI'} • {msg.time}
+                                                </div>
+                                                <p className="text-gray-900">{msg.message}</p>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center text-gray-500 py-8">No conversation yet</div>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="text"
+                                        value={newMessage}
+                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        placeholder="Type a message..."
+                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                                    />
+                                    <button 
+                                        onClick={() => {
+                                            if (newMessage.trim()) {
+                                                alert('Message sent: ' + newMessage);
+                                                setNewMessage('');
+                                            }
+                                        }}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold"
+                                    >
+                                        Send
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-6 border-t">
+                                <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-semibold">
+                                    📞 Call
+                                </button>
+                                <button className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold">
+                                    📧 Email
+                                </button>
+                                <button 
+                                    onClick={() => onUpdateStatus('appointment_set')}
+                                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold"
+                                >
+                                    📅 Schedule
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Call Queue View
+        function CallQueue({ leads }) {
+            return (
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Call Queue</h1>
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        <div className="space-y-4">
+                            {leads.map(lead => (
+                                <div key={lead.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                    <div>
+                                        <p className="font-semibold text-gray-900">{lead.name}</p>
+                                        <p className="text-sm text-gray-600">{lead.phone}</p>
+                                        <p className="text-xs text-gray-500">{lead.interest}</p>
+                                    </div>
+                                    <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold">
+                                        📞 Call Now
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Appointments View
+        function Appointments({ leads }) {
+            return (
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Scheduled Appointments</h1>
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        <div className="space-y-4">
+                            {leads.map(lead => (
+                                <div key={lead.id} className="p-4 border border-gray-200 rounded-lg">
+                                    <div className="flex justify-between mb-2">
+                                        <p className="font-semibold text-gray-900">{lead.name}</p>
+                                        <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
+                                            Confirmed
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-gray-600">{lead.interest}</p>
+                                    <p className="text-sm text-gray-500 mt-2">📅 {lead.notes}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Reports View
+        function Reports({ leads }) {
+            const stats = {
+                total: leads.length,
+                conversion: '25.5%',
+                response: '42s',
+                appointments: leads.filter(l => l.status === 'appointment_set').length
+            };
+
+            return (
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Reports & Analytics</h1>
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="bg-white rounded-xl shadow-lg p-6">
+                            <h3 className="text-lg font-bold mb-4">Performance Metrics</h3>
+                            <div className="space-y-4">
+                                <MetricRow label="Total Leads" value={stats.total} />
+                                <MetricRow label="Conversion Rate" value={stats.conversion} />
+                                <MetricRow label="Avg Response Time" value={stats.response} />
+                                <MetricRow label="Appointments Set" value={stats.appointments} />
+                            </div>
+                        </div>
+                        <div className="bg-white rounded-xl shadow-lg p-6">
+                            <h3 className="text-lg font-bold mb-4">Lead Sources</h3>
+                            <div className="space-y-4">
+                                <MetricRow label="Website" value="45%" />
+                                <MetricRow label="Phone" value="25%" />
+                                <MetricRow label="Social Media" value="20%" />
+                                <MetricRow label="Other" value="10%" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Helper Components
+        function StatCard({ title, value, subtitle, color }) {
+            const colors = {
+                blue: 'from-blue-500 to-blue-600',
+                green: 'from-green-500 to-green-600',
+                purple: 'from-purple-500 to-purple-600',
+                yellow: 'from-yellow-500 to-yellow-600'
+            };
+
+            return (
+                <div className={`bg-gradient-to-br ${colors[color]} text-white rounded-xl shadow-lg p-6`}>
+                    <p className="text-sm opacity-90 mb-2">{title}</p>
+                    <p className="text-3xl font-bold mb-1">{value}</p>
+                    <p className="text-sm opacity-75">{subtitle}</p>
+                </div>
+            );
+        }
+
+        function MetricRow({ label, value }) {
+            return (
+                <div className="flex justify-between">
+                    <span className="text-gray-600">{label}</span>
+                    <span className="font-semibold text-gray-900">{value}</span>
+                </div>
+            );
+        }
+
+        // Render
+        ReactDOM.render(<App />, document.getElementById('root'));
     </script>
-
-
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </body>
 </html>
