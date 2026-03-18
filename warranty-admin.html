@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warranty Admin - WarrantyPro AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // API Configuration
+        const API_URL = 'http://localhost:8500/api';
+        const api = axios.create({ baseURL: API_URL });
+
+        // Sample Data
+        const SAMPLE_CLAIMS = [{"id": 1, "ro": "#RO-1001", "vehicle": "2023 Accord", "claim": "Engine", "amount": "$1,245", "status": "Approved"}, {"id": 2, "ro": "#RO-1002", "vehicle": "2022 Camry", "claim": "Transmission", "amount": "$2,890", "status": "Pending"}, {"id": 3, "ro": "#RO-1003", "vehicle": "2023 F-150", "claim": "Electrical", "amount": "$678", "status": "Rejected"}, {"id": 4, "ro": "#RO-1004", "vehicle": "2022 CR-V", "claim": "Suspension", "amount": "$1,560", "status": "Approved"}];
+
+        // Main App Component
+        function App() {
+            const [user, setUser] = useState(null);
+            const [currentView, setCurrentView] = useState('dashboard');
+            const [data, setData] = useState(SAMPLE_CLAIMS);
+
+            useEffect(() => {
+                const storedUser = localStorage.getItem('user_8500');
+                if (storedUser) setUser(JSON.parse(storedUser));
+            }, []);
+
+            const handleLogin = (userData, token) => {
+                setUser(userData);
+                localStorage.setItem('user_8500', JSON.stringify(userData));
+                localStorage.setItem('token_8500', token);
+            };
+
+            const handleLogout = () => {
+                setUser(null);
+                localStorage.removeItem('user_8500');
+                localStorage.removeItem('token_8500');
+            };
+
+            if (!user) {
+                return <LoginScreen onLogin={handleLogin} />;
+            }
+
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    <nav className="bg-red-900 text-white shadow-lg">
+                        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <a href="/index.html" className="text-red-300 hover:text-white transition text-sm">
+                                    ← Back to Portal
+                                </a>
+                                <span className="text-gray-400">|</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-2xl">📋</span>
+                                    <h1 className="text-xl font-bold">WarrantyPro AI</h1>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <span className="text-sm opacity-75">👤 {user.name}</span>
+                                <button
+                                    onClick={handleLogout}
+                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold transition-colors"
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                        </div>
+                    </nav>
+
+                    <div className="flex">
+                        <aside className="w-64 bg-white shadow-lg min-h-screen">
+                            <nav className="p-4">
+                                                            <MenuItem
+                                icon="📊"
+                                label="Dashboard"
+                                active={currentView === 'dashboard'}
+                                onClick={() => setCurrentView('dashboard')}
+                            />
+                            <MenuItem
+                                icon="📋"
+                                label="Claims"
+                                active={currentView === 'claims'}
+                                onClick={() => setCurrentView('claims')}
+                            />
+                            <MenuItem
+                                icon="⏳"
+                                label="Pending"
+                                active={currentView === 'pending'}
+                                onClick={() => setCurrentView('pending')}
+                            />
+                            <MenuItem
+                                icon="✅"
+                                label="Approved"
+                                active={currentView === 'approved'}
+                                onClick={() => setCurrentView('approved')}
+                            />
+                            <MenuItem
+                                icon="📈"
+                                label="Reports"
+                                active={currentView === 'reports'}
+                                onClick={() => setCurrentView('reports')}
+                            />
+
+                            </nav>
+                        </aside>
+
+                        <main className="flex-1 p-8">
+                            {currentView === 'dashboard' && <Dashboard data={data} />}
+                            {currentView === 'claims' && <Claims data={data} />}
+                            {currentView === 'pending' && <Pending data={data} />}
+                            {currentView === 'approved' && <Approved data={data} />}
+                            {currentView === 'reports' && <Reports data={data} />}
+                            
+                        </main>
+                    </div>
+                </div>
+            );
+        }
+
+        // Login Screen
+        function LoginScreen({ onLogin }) {
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const userData = { name: username || 'Demo User', role: 'Warranty Administrator' };
+                const token = 'demo-token-' + Date.now();
+                onLogin(userData, token);
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-red-900 to-red-700 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+                        <div className="text-center mb-8">
+                            <span className="text-6xl">📋</span>
+                            <h1 className="text-3xl font-bold text-gray-900 mt-4">WarrantyPro AI</h1>
+                            <p className="text-gray-600 mt-2">Warranty Claim Processing</p>
+                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
+                                <input
+                                    type="text"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                    placeholder="Enter username"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                    placeholder="Enter password"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-lg transition-colors"
+                            >
+                                Login to WarrantyPro AI
+                            </button>
+                        </form>
+                        <p className="text-center text-sm text-gray-500 mt-6">
+                            Demo Mode - Enter any credentials
+                        </p>
+                    </div>
+                </div>
+            );
+        }
+
+        // Menu Item Component
+        function MenuItem({ icon, label, active, onClick, badge }) {
+            return (
+                <button
+                    onClick={onClick}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors mb-2 ${
+                        active ? 'bg-red-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                >
+                    <span className="text-xl">{icon}</span>
+                    <span className="font-medium flex-1 text-left">{label}</span>
+                    {badge && (
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            active ? 'bg-white text-red-600' : 'bg-red-100 text-red-600'
+                        }`}>
+                            {badge}
+                        </span>
+                    )}
+                </button>
+            );
+        }
+
+        // Dashboard View
+        function Dashboard({ data }) {
+            return (
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Dashboard</h1>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <StatCard title="Claims Submitted" value="34" subtitle="This month" color="blue" />
+                        <StatCard title="Approved" value="28" subtitle="82.4% approval" color="green" />
+                        <StatCard title="Pending Review" value="6" subtitle="Avg: 5.2 days" color="purple" />
+                        <StatCard title="Total Reimbursed" value="$45,680" subtitle="This month" color="yellow" />
+                        
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Activity</h2>
+                        <div className="space-y-4">
+                            {data.slice(0, 5).map(item => (
+                                <div key={item.id} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition">
+                                    <p className="font-semibold text-gray-900">{item.name || item.customer || item.title}</p>
+                                    <p className="text-sm text-gray-600">{item.description || item.status}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        
+        function Claims({ data }) {
+            return (
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Claims</h1>
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        <p className="text-gray-600">Full claims interface would be displayed here...</p>
+                    </div>
+                </div>
+            );
+        }
+
+        function Pending({ data }) {
+            return (
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Pending</h1>
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        <p className="text-gray-600">Full pending interface would be displayed here...</p>
+                    </div>
+                </div>
+            );
+        }
+
+        function Approved({ data }) {
+            return (
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Approved</h1>
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        <p className="text-gray-600">Full approved interface would be displayed here...</p>
+                    </div>
+                </div>
+            );
+        }
+
+        function Reports({ data }) {
+            return (
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Reports</h1>
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        <p className="text-gray-600">Full reports interface would be displayed here...</p>
+                    </div>
+                </div>
+            );
+        }
+
+
+        // Helper Components
+        function StatCard({ title, value, subtitle, color }) {
+            const colors = {
+                blue: 'from-blue-500 to-blue-600',
+                green: 'from-green-500 to-green-600',
+                purple: 'from-purple-500 to-purple-600',
+                yellow: 'from-yellow-500 to-yellow-600',
+                cyan: 'from-cyan-500 to-cyan-600',
+                indigo: 'from-indigo-500 to-indigo-600',
+                teal: 'from-teal-500 to-teal-600',
+                pink: 'from-pink-500 to-pink-600',
+                red: 'from-red-500 to-red-600',
+                orange: 'from-orange-500 to-orange-600'
+            };
+
+            return (
+                <div className={`bg-gradient-to-br ${colors[color]} text-white rounded-xl shadow-lg p-6`}>
+                    <p className="text-sm opacity-90 mb-2">{title}</p>
+                    <p className="text-3xl font-bold mb-1">{value}</p>
+                    <p className="text-sm opacity-75">{subtitle}</p>
+                </div>
+            );
+        }
+
+        // Render
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
